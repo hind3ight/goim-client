@@ -65,7 +65,7 @@ func main() {
 		}
 	}()
 
-	ticker := time.NewTicker(time.Second * 20)
+	ticker := time.NewTicker(time.Second * 3)
 	defer ticker.Stop()
 
 	for {
@@ -103,7 +103,11 @@ func main() {
 
 // 随机
 func randType() (sendType int) {
+lib:
 	rand.Seed(time.Now().UnixNano())
 	sendType = rand.Intn(3)
+	if sendType == 0 {
+		goto lib
+	}
 	return
 }
