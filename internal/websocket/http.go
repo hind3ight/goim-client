@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	baseUrl      = `http://192.168.32.124:3111/goim/push`
+	baseUrl      = `http://192.168.32.97:3111/goim/push`
 	broadcastUrl = `/all?operation=%v`
 	roomUrl      = `/room?operation=%v&type=live&room=%v`
 	midUrl       = `/mids?operation=%v&mids=%v`

@@ -8,7 +8,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/gorilla/websocket"
@@ -18,87 +17,94 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
 var addr = flag.String("addr", "192.168.32.124:3102", "http service address")
 
 func main() {
-	flag.Parse()
-	log.SetFlags(0)
 
-	interrupt := make(chan os.Signal, 1)
-	signal.Notify(interrupt, os.Interrupt)
+	// signal
+	c := make(chan os.Signal, 1)
+	createWSConn(c)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	for {
+		s := <-c
+		fmt.Printf("get a signal %s", s.String())
+		//log.Info()
+		switch s {
+		case syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT:
+			//svc.Close()
+			fmt.Println(`service exit`)
+			time.Sleep(time.Second)
+			return
+		case syscall.SIGHUP:
+		default:
+			return
+		}
+	}
+
+}
+
+var (
+	MaxConnectTimes = 10
+	Delay           = 15000
+)
+
+func createWSConn(signal chan os.Signal) *websocket.Conn {
 
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/sub"}
 	log.Printf("connecting to %s", u.String())
-	fmt.Println(u.String())
+	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
+	if err != nil {
+		log.Fatal("dial:", err)
+	}
+	ws.Auth(conn)
+	go onMessage(conn)
+	tick := time.Tick(time.Second * 10)
+	go func() {
+		for {
+			select {
+			case t := <-tick: // 每隔10秒发送信息
+				ws.SendMsgByWS(conn, []byte(fmt.Sprintf("hello,this is %s", t.Format("2006-01-02 15:04:05"))))
+			case <-signal:
+				log.Println("interrupt")
 
+				err = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+				if err != nil {
+					log.Println("write close:", err)
+					return
+				}
+
+				return
+
+			}
+		}
+	}()
+	return conn
+}
+
+func connect(u url.URL) {
 	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		log.Fatal("dial:", err)
 	}
 
-	authMsg := ws.Auth()
-	err = c.WriteMessage(websocket.BinaryMessage, authMsg)
-	if err != nil {
-		fmt.Println(err)
-	}
-	defer c.Close()
+	go onMessage(c)
+}
 
-	done := make(chan struct{})
-
-	go func() {
-		defer close(done)
-		for {
-			_, message, err := c.ReadMessage()
-			if err != nil {
-				log.Println("read:", err)
-				return
-			}
-			p, err := ws.ParseMsg(message)
-			if err != nil {
-				log.Println("read:", err)
-				return
-			}
-			ws.HandleMsg(c, p)
-		}
-	}()
-
-	ticker := time.NewTicker(time.Second * 3)
-	defer ticker.Stop()
-
+func onMessage(c *websocket.Conn) {
 	for {
-		select {
-		case <-done:
-			return
+		_, message, err := c.ReadMessage()
 
-		case t := <-ticker.C:
-			type msgStruct struct {
-				Time string `json:"time"`
-			}
-			msg := msgStruct{Time: t.String()}
-			msgByte, _ := json.Marshal(msg)
-			//ws.SendMsgByWS(c, msgByte)
-
-			ws.SendMsgByHttp(randType(), msgByte)
-		case <-interrupt:
-			log.Println("interrupt")
-
-			err := c.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-			if err != nil {
-				log.Println("write close:", err)
-				return
-			}
-			select {
-			case <-done:
-			case <-time.After(time.Second):
-			}
+		p, err := ws.ParseMsg(message)
+		if err != nil {
+			log.Println("read:", err)
 			return
 		}
+		ws.HandleMsg(c, p)
 	}
-
-	// todo 重新建立连接
 }
 
 // 随机
