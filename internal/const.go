@@ -7,25 +7,34 @@
 
 package internal
 
+import "time"
+
 const (
 	// MaxBodySize max proto body size
 	MaxBodySize = int32(1 << 12)
 )
 const (
 	// size
-	_packSize      = 4
-	_headerSize    = 2
-	_verSize       = 2
-	_opSize        = 4
-	_seqSize       = 4
-	_heartSize     = 4
-	_rawHeaderSize = _packSize + _headerSize + _verSize + _opSize + _seqSize
-	_maxPackSize   = MaxBodySize + int32(_rawHeaderSize)
+	PackSize      = 4
+	HeaderSize    = 2
+	VerSize       = 2
+	OpSize        = 4
+	SeqSize       = 4
+	HeartSize     = 4
+	RawHeaderSize = PackSize + HeaderSize + VerSize + OpSize + SeqSize
+	_maxPackSize  = MaxBodySize + int32(RawHeaderSize)
 	// offset
-	_packOffset   = 0
-	_headerOffset = _packOffset + _packSize
-	_verOffset    = _headerOffset + _headerSize
-	_opOffset     = _verOffset + _verSize
-	_seqOffset    = _opOffset + _opSize
-	_heartOffset  = _seqOffset + _seqSize
+	PackOffset   = 0
+	HeaderOffset = PackOffset + PackSize
+	VerOffset    = HeaderOffset + HeaderSize
+	OpOffset     = VerOffset + VerSize
+	SeqOffset    = OpOffset + OpSize
+	HeartOffset  = SeqOffset + SeqSize
 )
+
+var HbOpen bool
+
+// 定时任务
+var HeartbeatInterval time.Time
+
+const HearBeatSpec = time.Second * 30 // 心跳间隔时间

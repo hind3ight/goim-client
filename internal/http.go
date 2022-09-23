@@ -55,7 +55,6 @@ func SendMsgByHttp(sendType int, data []byte) {
 	}
 	var resData res
 	json.Unmarshal(b, resData)
-	//fmt.Println(string(b))
 }
 
 func httpRequest(url string, data []byte) (*http.Response, error) {

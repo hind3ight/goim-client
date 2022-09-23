@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	ws "goim-client/internal"
+	"goim-client/internal/wesocket"
 	"io"
 	"log"
 	"math/rand"
@@ -62,7 +63,7 @@ func createWSConn() {
 		log.Fatal("dial:", err)
 		return
 	}
-	ws.AuthWS(conn)
+	wesocket.AuthWS(conn)
 
 	go onMessage(conn)
 	tick := time.Tick(time.Second * 10)
@@ -70,8 +71,7 @@ func createWSConn() {
 		for {
 			select {
 			case t := <-tick: // 每隔10秒发送信息
-				//fmt.Println(t)
-				ws.SendMsgByWS(conn, []byte(fmt.Sprintf("hello,this is %s", t.Format("2006-01-02 15:04:05"))))
+				wesocket.SendMsgByWS(conn, []byte(fmt.Sprintf("hello,this is %s", t.Format("2006-01-02 15:04:05"))))
 			case <-signalChan:
 				log.Println("interrupt")
 
@@ -102,7 +102,7 @@ func onMessage(c *websocket.Conn) {
 			log.Println("读取错误:", err)
 			return
 		}
-		ws.HandleMsg(c, p)
+		wesocket.HandleMsg(c, p)
 	}
 }
 
