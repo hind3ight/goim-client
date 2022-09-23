@@ -11,7 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/gorilla/websocket"
-	ws "goim-client/internal/websocket"
+	ws "goim-client/internal"
 	"io"
 	"log"
 	"math/rand"
@@ -51,17 +51,18 @@ func main() {
 
 }
 
-func createWSConn() *websocket.Conn {
+func createWSConn() {
 
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/sub"}
 	log.Printf("connecting to %s", u.String())
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
-		log.Fatal("dial:", err)
 		time.Sleep(reconnectSpec)
-		createWSConn()
+		reconnect <- struct{}{}
+		log.Fatal("dial:", err)
+		return
 	}
-	ws.Auth(conn)
+	ws.AuthWS(conn)
 
 	go onMessage(conn)
 	tick := time.Tick(time.Second * 10)
@@ -85,7 +86,7 @@ func createWSConn() *websocket.Conn {
 			}
 		}
 	}()
-	return conn
+	return
 }
 
 func onMessage(c *websocket.Conn) {

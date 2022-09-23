@@ -5,17 +5,15 @@
 //  @createdtime
 //  @updatedtime
 
-package ws
+package internal
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"goim-client/api/grpc"
 	"goim-client/pkg/encoding/binary"
 	"io"
-	"strings"
 	"time"
 )
 
@@ -25,13 +23,6 @@ var hbOpen bool
 var heartbeatInterval time.Time
 
 const hearBeatSpec = time.Second * 30 // 心跳间隔时间
-
-var token = TokenStruct{ // todo 根据配置文件读取
-	Mid:      1242,
-	RoomId:   "live://1000",
-	Platform: "web",
-	Accepts:  []int{1000, 1001, 1002},
-}
 
 // 解析msg
 func ParseMsg(msg []byte) (pc *grpc.Proto, err error) {
@@ -95,47 +86,39 @@ func HandleMsg(c *websocket.Conn, p *grpc.Proto) {
 }
 
 // 权限校验
-func Auth(c *websocket.Conn) {
 
-	headerBuf := make([]byte, 16)
-	bodyBuf := handleJson(token)
-
-	binary.BigEndian.PutInt32(headerBuf[_packOffset:], int32(len(bodyBuf)+_rawHeaderSize))
-	binary.BigEndian.PutInt16(headerBuf[_headerOffset:], int16(_rawHeaderSize))
-	binary.BigEndian.PutInt16(headerBuf[_verOffset:], 1)
-	binary.BigEndian.PutInt32(headerBuf[_opOffset:], 7)
-	binary.BigEndian.PutInt32(headerBuf[_seqOffset:], 1)
-
-	c.WriteMessage(websocket.BinaryMessage, mergeArrayBuffer(headerBuf, bodyBuf))
+func AuthWS(c *websocket.Conn) {
+	msgBuf := Auth()
+	c.WriteMessage(websocket.BinaryMessage, msgBuf)
 }
+
 func mergeArrayBuffer(headerBuf, bodyBuf []byte) (res []byte) {
 	res = append(headerBuf, bodyBuf...)
 	return
 }
 
-func handleJson(token TokenStruct) []byte {
-	b, _ := json.Marshal(token)
-	tmpSlice := strings.Split(string(b), `,"`)
-	b = []byte(strings.Join(tmpSlice, `, "`))
-	return b
-}
-
 // 心跳
-func Heartbeat(ws *websocket.Conn) {
-	heartBeatBuf := make([]byte, 16)
-	binary.BigEndian.PutInt32(heartBeatBuf[_packOffset:], int32(_rawHeaderSize))
-	binary.BigEndian.PutInt16(heartBeatBuf[_headerOffset:], int16(_rawHeaderSize))
-	binary.BigEndian.PutInt16(heartBeatBuf[_verOffset:], 1)
-	binary.BigEndian.PutInt32(heartBeatBuf[_opOffset:], 2)
-	binary.BigEndian.PutInt32(heartBeatBuf[_seqOffset:], 1)
-	err := ws.WriteMessage(websocket.BinaryMessage, heartBeatBuf)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println("send: heartbeat")
+
+func HeartbeatWS(c *websocket.Conn) {
+	msgBuf := Heartbeat()
+	c.WriteMessage(websocket.BinaryMessage, msgBuf)
 }
 
 func SendMsgByWS(ws *websocket.Conn, msg []byte) {
+	//headerBuf := make([]byte, 16)
+	//
+	//binary.BigEndian.PutInt32(headerBuf[_packOffset:], int32(len(msg)+_rawHeaderSize))
+	//binary.BigEndian.PutInt16(headerBuf[_headerOffset:], int16(_rawHeaderSize))
+	//binary.BigEndian.PutInt16(headerBuf[_verOffset:], 1)
+	//binary.BigEndian.PutInt32(headerBuf[_opOffset:], 4)
+	//binary.BigEndian.PutInt32(headerBuf[_seqOffset:], 1)
+
+	ws.WriteMessage(websocket.BinaryMessage, PackageMsg(msg))
+
+	return
+}
+
+func PackageMsg(msg []byte) []byte {
 	headerBuf := make([]byte, 16)
 
 	binary.BigEndian.PutInt32(headerBuf[_packOffset:], int32(len(msg)+_rawHeaderSize))
@@ -143,16 +126,13 @@ func SendMsgByWS(ws *websocket.Conn, msg []byte) {
 	binary.BigEndian.PutInt16(headerBuf[_verOffset:], 1)
 	binary.BigEndian.PutInt32(headerBuf[_opOffset:], 4)
 	binary.BigEndian.PutInt32(headerBuf[_seqOffset:], 1)
-
-	ws.WriteMessage(websocket.BinaryMessage, mergeArrayBuffer(headerBuf, msg))
-
-	return
+	return mergeArrayBuffer(headerBuf, msg)
 }
 
 func DocSyncTaskCronJob(c *websocket.Conn) {
 	for {
 		if heartbeatInterval.After(time.Now()) {
-			Heartbeat(c)
+			HeartbeatWS(c)
 			heartbeatInterval.Add(hearBeatSpec)
 			time.Sleep(time.Second * 10)
 		}

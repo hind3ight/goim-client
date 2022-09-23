@@ -5,7 +5,7 @@
 //  @createdtime
 //  @updatedtime
 
-package ws
+package internal
 
 import (
 	"encoding/json"

@@ -5,7 +5,7 @@
 //  @createdtime
 //  @updatedtime
 
-package ws
+package internal
 
 type TokenStruct struct {
 	Mid      int    `json:"mid"`
