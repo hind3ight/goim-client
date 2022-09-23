@@ -114,7 +114,7 @@ func HandleMsg(c *websocket.Conn, p *grpc.Proto) {
 // 权限校验
 func Auth(c *websocket.Conn) {
 	token := TokenStruct{ // todo 根据配置文件读取
-		Mid:      125,
+		Mid:      123,
 		RoomId:   "live://1000",
 		Platform: "web",
 		Accepts:  []int{1000, 1001, 1002},

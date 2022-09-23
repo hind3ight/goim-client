@@ -61,13 +61,15 @@ func createWSConn(signal chan os.Signal) *websocket.Conn {
 		log.Fatal("dial:", err)
 	}
 	ws.Auth(conn)
+	ws.SendMsgByWS(conn, []byte("hello"))
 	go onMessage(conn)
 	tick := time.Tick(time.Second * 10)
 	go func() {
 		for {
 			select {
-			case t := <-tick: // 每隔10秒发送信息
-				ws.SendMsgByWS(conn, []byte(fmt.Sprintf("hello,this is %s", t.Format("2006-01-02 15:04:05"))))
+			case _ = <-tick: // 每隔10秒发送信息
+				//fmt.Println(t)
+				//ws.SendMsgByWS(conn, []byte(fmt.Sprintf("hello,this is %s", t.Format("2006-01-02 15:04:05"))))
 			case <-signal:
 				log.Println("interrupt")
 
