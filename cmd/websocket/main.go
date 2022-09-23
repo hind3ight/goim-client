@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/gorilla/websocket"
 	ws "goim-client/internal/websocket"
+	"io"
 	"log"
 	"math/rand"
 	"net/url"
@@ -22,15 +23,18 @@ import (
 )
 
 var addr = flag.String("addr", "192.168.32.124:3102", "http service address")
+var (
+	signalChan    = make(chan os.Signal, 1)
+	reconnectSpec = time.Minute * 1
+)
 
 func main() {
+	createWSConn()
+	go Reconnect() // 重连监控
 
-	// signal
-	c := make(chan os.Signal, 1)
-	createWSConn(c)
-	signal.Notify(c, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	signal.Notify(signalChan, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
 	for {
-		s := <-c
+		s := <-signalChan
 		fmt.Printf("get a signal %s", s.String())
 		//log.Info()
 		switch s {
@@ -47,30 +51,27 @@ func main() {
 
 }
 
-var (
-	MaxConnectTimes = 10
-	Delay           = 15000
-)
-
-func createWSConn(signal chan os.Signal) *websocket.Conn {
+func createWSConn() *websocket.Conn {
 
 	u := url.URL{Scheme: "ws", Host: *addr, Path: "/sub"}
 	log.Printf("connecting to %s", u.String())
 	conn, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
 	if err != nil {
 		log.Fatal("dial:", err)
+		time.Sleep(reconnectSpec)
+		createWSConn()
 	}
 	ws.Auth(conn)
-	ws.SendMsgByWS(conn, []byte("hello"))
+
 	go onMessage(conn)
 	tick := time.Tick(time.Second * 10)
 	go func() {
 		for {
 			select {
-			case _ = <-tick: // 每隔10秒发送信息
+			case t := <-tick: // 每隔10秒发送信息
 				//fmt.Println(t)
-				//ws.SendMsgByWS(conn, []byte(fmt.Sprintf("hello,this is %s", t.Format("2006-01-02 15:04:05"))))
-			case <-signal:
+				ws.SendMsgByWS(conn, []byte(fmt.Sprintf("hello,this is %s", t.Format("2006-01-02 15:04:05"))))
+			case <-signalChan:
 				log.Println("interrupt")
 
 				err = conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
@@ -87,22 +88,17 @@ func createWSConn(signal chan os.Signal) *websocket.Conn {
 	return conn
 }
 
-func connect(u url.URL) {
-	c, _, err := websocket.DefaultDialer.Dial(u.String(), nil)
-	if err != nil {
-		log.Fatal("dial:", err)
-	}
-
-	go onMessage(c)
-}
-
 func onMessage(c *websocket.Conn) {
 	for {
 		_, message, err := c.ReadMessage()
 
 		p, err := ws.ParseMsg(message)
 		if err != nil {
-			log.Println("read:", err)
+			if err == io.EOF {
+				reconnect <- struct{}{}
+				return
+			}
+			log.Println("读取错误:", err)
 			return
 		}
 		ws.HandleMsg(c, p)
@@ -118,4 +114,15 @@ lib:
 		goto lib
 	}
 	return
+}
+
+var reconnect chan struct{}
+
+func Reconnect() {
+	for {
+		select {
+		case <-reconnect:
+			createWSConn()
+		}
+	}
 }
