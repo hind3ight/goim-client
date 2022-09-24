@@ -20,12 +20,9 @@ var (
 	signalChan = make(chan os.Signal, 1)
 )
 
-const (
-	tcpUrl = `192.168.32.124:3101`
-)
-
 func main() {
-	tcp.Start(tcpUrl)
+	tcp.CreateTCPConn()
+	go tcp.Reconnect() // 重连监控
 
 	signal.Notify(signalChan, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
 	for {

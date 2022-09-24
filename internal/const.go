@@ -38,3 +38,4 @@ var HbOpen bool
 var HeartbeatInterval time.Time
 
 const HearBeatSpec = time.Second * 30 // 心跳间隔时间
+const SendMsgSpec = time.Second * 10  // 消息发送间隔时间
