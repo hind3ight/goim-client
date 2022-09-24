@@ -9,7 +9,6 @@ package wesocket
 
 import (
 	"fmt"
-	"github.com/gorilla/websocket"
 	"goim-client/api/grpc"
 	"goim-client/internal"
 	"io"
@@ -18,32 +17,32 @@ import (
 )
 
 // 信息处理
-func OnMessage(c *websocket.Conn) {
+func (s *WSConn) OnMessage() {
 	for {
-		_, message, err := c.ReadMessage()
+		_, message, err := s.conn.ReadMessage()
 
 		p, err := internal.ParseMsg(message)
 		if err != nil {
 			if err == io.EOF {
 				reconnect <- struct{}{}
-				c.Close()
+				s.conn.Close()
 				return
 			}
 			log.Println("读取错误:", err)
 			return
 		}
-		handleWSMsg(c, p)
+		s.handleWSMsg(p)
 	}
 }
 
 // 根据msg处理
 
-func handleWSMsg(c *websocket.Conn, p *grpc.Proto) {
+func (s *WSConn) handleWSMsg(p *grpc.Proto) {
 	switch p.Op {
 	case 8:
 		if !internal.HbOpen {
 			timer := time.NewTimer(internal.HearBeatSpec)
-			go DoHeartCronJob(c, timer)
+			go s.DoHeartCronJob(timer)
 			internal.HbOpen = true
 		}
 	case 3:

@@ -14,6 +14,7 @@ import (
 	"goim-client/internal"
 	"log"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -21,6 +22,11 @@ var addr = flag.String("addr", "192.168.32.124:3102", "http service address")
 var (
 	reconnectSpec = time.Minute * 1
 )
+
+type WSConn struct {
+	mutex sync.Mutex
+	conn  *websocket.Conn
+}
 
 // 创建连接
 
@@ -35,10 +41,13 @@ func CreateWSConn() {
 		log.Fatal("dial:", err)
 		return
 	}
-	AuthWS(conn)
+	newConn := WSConn{
+		conn: conn,
+	}
+	newConn.AuthWS()
 
-	go SendMsgByWS(conn)
-	go OnMessage(conn)
+	go newConn.SendMsgByWS()
+	go newConn.OnMessage()
 
 	return
 }
@@ -58,12 +67,12 @@ func Reconnect() {
 }
 
 // 心跳定时任务
-func DoHeartCronJob(c *websocket.Conn, timer *time.Timer) {
-	HeartbeatWS(c) // 第一次直接执行
+func (s *WSConn) DoHeartCronJob(timer *time.Timer) {
+	s.HeartbeatWS() // 第一次直接执行
 	for {
 		select {
 		case <-timer.C:
-			HeartbeatWS(c)
+			s.HeartbeatWS()
 		}
 	}
 }
