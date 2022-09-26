@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/Terry-Mao/goim/pkg/encoding/binary"
-	"goim-client/api/grpc"
 	"io"
 	"strings"
 )
@@ -57,7 +56,7 @@ func handleJson(token TokenStruct) []byte {
 }
 
 // 解析msg
-func ParseMsg(msg []byte) (pc *grpc.Proto, err error) {
+func ParseMsg(msg []byte) (pc *MsgProto, err error) {
 	var (
 		bodyLen   int
 		headerLen int16
@@ -65,7 +64,7 @@ func ParseMsg(msg []byte) (pc *grpc.Proto, err error) {
 		buf       []byte
 	)
 
-	p := &grpc.Proto{}
+	p := &MsgProto{}
 	buf = msg
 	if len(buf) < RawHeaderSize {
 		return p, io.EOF

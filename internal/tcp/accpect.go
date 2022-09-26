@@ -9,7 +9,6 @@ package tcp
 
 import (
 	"fmt"
-	"goim-client/api/grpc"
 	"goim-client/internal"
 	"io"
 	"log"
@@ -35,7 +34,7 @@ func OnMessage(c *net.TCPConn) {
 	}
 }
 
-func handleTCPMsg(c *net.TCPConn, p *grpc.Proto) {
+func handleTCPMsg(c *net.TCPConn, p *internal.MsgProto) {
 	switch p.Op {
 	case 8:
 		if !internal.HbOpen {
@@ -45,16 +44,14 @@ func handleTCPMsg(c *net.TCPConn, p *grpc.Proto) {
 	case 3:
 		fmt.Println("receive: heartbeat")
 	case 9:
-		body := p.GetBody()
 
-		if len(body) > 16 {
-			fmt.Printf("messageReceived： ver=%v,body=%s\n", p.Ver, string(body[16:]))
+		if len(p.Body) > 16 {
+			fmt.Printf("messageReceived： ver=%v,body=%s\n", p.Ver, string(p.Body[16:]))
 		}
 	case 5:
-		body := p.GetBody()
 
-		if len(body) > 16 {
-			fmt.Printf("messageReceived： ver=%v,body=%s\n", p.Ver, string(body[16:]))
+		if len(p.Body) > 16 {
+			fmt.Printf("messageReceived： ver=%v,body=%s\n", p.Ver, string(p.Body[16:]))
 		}
 	case 1000:
 		fmt.Printf("messageReceived： ver=%v,body=%s\n", p.Ver, string(p.Body))
