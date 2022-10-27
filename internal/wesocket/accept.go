@@ -24,6 +24,7 @@ func (s *WSConn) OnMessage() {
 		if err != nil {
 			if err == io.EOF {
 				reconnect <- struct{}{}
+				connWs <- s.conn
 				s.conn.Close()
 				return
 			}

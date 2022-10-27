@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/Terry-Mao/goim/pkg/encoding/binary"
+	"goim-client/conf"
 	"io"
 	"strings"
 )
@@ -26,7 +27,7 @@ var token = TokenStruct{ // todo 根据配置文件读取
 func Auth() (msg []byte) {
 
 	headerBuf := make([]byte, 16)
-	bodyBuf := handleJson(token)
+	bodyBuf := handleJson(conf.Conf.Token)
 
 	binary.BigEndian.PutInt32(headerBuf[PackOffset:], int32(len(bodyBuf)+RawHeaderSize))
 	binary.BigEndian.PutInt16(headerBuf[HeaderOffset:], int16(RawHeaderSize))
@@ -48,7 +49,7 @@ func Heartbeat() []byte {
 	return heartBeatBuf
 }
 
-func handleJson(token TokenStruct) []byte {
+func handleJson(token *conf.Token) []byte {
 	b, _ := json.Marshal(token)
 	tmpSlice := strings.Split(string(b), `,"`)
 	b = []byte(strings.Join(tmpSlice, `, "`))

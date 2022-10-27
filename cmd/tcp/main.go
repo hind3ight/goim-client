@@ -9,6 +9,7 @@ package main
 
 import (
 	"fmt"
+	"goim-client/conf"
 	"goim-client/internal/tcp"
 	"os"
 	"os/signal"
@@ -21,6 +22,10 @@ var (
 )
 
 func main() {
+	if err := conf.Init(); err != nil {
+		panic(err)
+	}
+
 	tcp.CreateTCPConn()
 	go tcp.Reconnect() // 重连监控
 

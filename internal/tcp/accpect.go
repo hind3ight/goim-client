@@ -10,6 +10,7 @@ package tcp
 import (
 	"fmt"
 	"goim-client/internal"
+	"goim-client/server"
 	"io"
 	"log"
 	"net"
@@ -24,7 +25,8 @@ func OnMessage(c *net.TCPConn) {
 		p, err := internal.ParseMsg(realBuf)
 		if err != nil {
 			if err == io.EOF {
-
+				reconnect <- struct{}{}
+				c.Close()
 				return
 			}
 			log.Println("读取错误:", err)

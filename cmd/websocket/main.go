@@ -9,6 +9,7 @@ package main
 
 import (
 	"fmt"
+	"goim-client/conf"
 	"goim-client/internal/wesocket"
 	"os"
 	"os/signal"
@@ -21,6 +22,9 @@ var (
 )
 
 func main() {
+	if err := conf.Init(); err != nil {
+		panic(err)
+	}
 	wesocket.CreateWSConn()
 	go wesocket.Reconnect() // 重连监控
 

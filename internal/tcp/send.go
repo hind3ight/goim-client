@@ -34,7 +34,11 @@ func SendMsgByTCP(conn net.Conn) {
 	timer := time.Tick(internal.SendMsgSpec)
 	for t := range timer {
 		msg := []byte("sendMsg by tcp client,data: " + t.Format("2006-01-02 15:04:05"))
-		conn.Write(internal.PackageMsg(msg))
-		fmt.Printf("sendMsgByTCP :%s\n", string(msg))
+		if _, err := conn.Write(internal.PackageMsg(msg)); err != nil {
+			fmt.Printf("err :%v", err)
+			reconnect <- struct{}{}
+		} else {
+			fmt.Printf("sendMsgByTCP :%s\n", string(msg))
+		}
 	}
 }

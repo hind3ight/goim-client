@@ -41,12 +41,39 @@ func (s *WSConn) HeartbeatWS() {
 func (s *WSConn) SendMsgByWS() {
 	timer := time.Tick(internal.SendMsgSpec)
 	for t := range timer {
-		msg := []byte("sendMsg by ws client,data: " + t.Format("2006-01-02 15:04:05"))
-		s.mutex.Lock()
-		_ = s.conn.WriteMessage(websocket.BinaryMessage, internal.PackageMsg(msg))
-		s.mutex.Unlock()
+		select {
+		case a := <-connWs:
+			if a == s.conn {
+				a.Close()
+				return
+			}
+		default:
+			msg := []byte("sendMsg by ws client,data: " + t.Format("2006-01-02 15:04:05"))
+			s.mutex.Lock()
+			err := s.conn.WriteMessage(websocket.BinaryMessage, internal.PackageMsg(msg))
+			s.mutex.Unlock()
+			if err != nil {
+				fmt.Println(err)
+				s.conn.Close()
+				return
+			} else {
+				fmt.Printf("sendMsgByWS :%s\n", string(msg))
+			}
+		}
+	}
+}
 
-		fmt.Printf("sendMsgByWS :%s\n", string(msg))
-
+func (s *WSConn) SendHearBeatWS() {
+	timer := time.Tick(internal.HearBeatSpec)
+	for range timer {
+		select {
+		case a := <-connWs:
+			if a == s.conn {
+				a.Close()
+				return
+			}
+		default:
+			s.HeartbeatWS()
+		}
 	}
 }

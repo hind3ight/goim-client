@@ -18,7 +18,9 @@ import (
 	"time"
 )
 
-var addr = flag.String("addr", "192.168.32.124:3102", "http service address")
+var addr = flag.String("addr", "192.168.32.97:3102", "http service address")
+
+//var addr = flag.String("addr", "127.0.0.1:3102", "http service address")
 var (
 	reconnectSpec = time.Minute * 1
 )
@@ -48,11 +50,12 @@ func CreateWSConn() {
 
 	go newConn.SendMsgByWS()
 	go newConn.OnMessage()
-
+	go newConn.SendHearBeatWS()
 	return
 }
 
 var reconnect = make(chan struct{})
+var connWs = make(chan *websocket.Conn)
 
 func Reconnect() {
 	for {
@@ -61,7 +64,6 @@ func Reconnect() {
 			fmt.Printf("%s开始重连", time.Now().Format("2006-01-02 15:04:05"))
 			CreateWSConn()          // 创建新的连接
 			internal.HbOpen = false // 重置心跳服务
-
 		}
 	}
 }
